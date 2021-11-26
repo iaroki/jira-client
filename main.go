@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 
@@ -10,10 +11,10 @@ import (
 
 func main() {
 
-  jiraUrl := "https://atlassian.net"
-  jiraUsername := ""
-  jiraPassword := ""
-  jiraRelease := ""
+  jiraUrl := os.Getenv("JIRA_URL")
+  jiraUsername := os.Getenv("JIRA_USERNAME")
+  jiraPassword := os.Getenv("JIRA_PASSWORD")
+  jiraRelease := os.Getenv("JIRA_RELEASE")
   jiraJQL := fmt.Sprintf("fixVersion = '%s'", jiraRelease)
 
   jiraAuth := jira.BasicAuthTransport{
