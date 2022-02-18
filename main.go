@@ -1,7 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+
 	"os"
 	"strconv"
 	"strings"
@@ -14,8 +17,10 @@ func main() {
   jiraUrl := os.Getenv("JIRA_URL")
   jiraUsername := os.Getenv("JIRA_USERNAME")
   jiraPassword := os.Getenv("JIRA_PASSWORD")
-  jiraRelease := os.Getenv("JIRA_RELEASE")
-  jiraJQL := fmt.Sprintf("fixVersion = '%s'", jiraRelease)
+  jiraIssue    := "DEVOPS-1880"
+  jiraIssueLabel := "devops-automation"
+  // jiraRelease := os.Getenv("JIRA_RELEASE")
+  // jiraJQL := fmt.Sprintf("fixVersion = '%s'", jiraRelease)
 
   jiraAuth := jira.BasicAuthTransport{
 		Username: jiraUsername,
@@ -28,6 +33,66 @@ func main() {
     fmt.Println(err)
   }
 
+  setIssueLabel(jiraClient, jiraIssue, jiraIssueLabel)
+  // getSprintStats(jiraClient, jiraJQL, jiraRelease)
+  // createIssue(jiraClient, "DEVOPS", "Task", "Summary here", "Description here")
+
+}
+
+func createIssue(jiraClient *jira.Client, jiraProject string, issueType string, issueSummary string, issueDescription string) {
+  jiraIssue := jira.Issue{
+		Fields: &jira.IssueFields{
+			Description: issueDescription,
+			Type: jira.IssueType{
+				Name: issueType,
+			},
+			Project: jira.Project{
+				Key: jiraProject,
+			},
+			Summary: issueSummary,
+		},
+	}
+	issue, _, err := jiraClient.Issue.Create(&jiraIssue)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf(issue.Key)
+}
+
+func setIssueLabel(jiraClient *jira.Client, jiraIssue string, issueLabel string) {
+
+  type Labels struct {
+    Add string `json:"add"`
+  }
+  type Update struct {
+    Labels []Labels `json:"labels"`
+  }
+  // type Body struct {
+  //   Update Update `json:"update"`
+  // }
+
+  // labelsList := make([]string, 1)
+  // labelsList[0] = issueLabel
+  labelsStruct := Labels{Add: issueLabel}
+  labelsStructList := make([]Labels, 1)
+  labelsStructList[0] = labelsStruct
+  updateStruct := Update{Labels: labelsStructList}
+  // bodyStruct := Body{Update: updateStruct}
+  sss, _ := json.Marshal(updateStruct) //bodyStruct)
+  fmt.Println(string(sss))
+
+
+  data := map[string]interface{}{
+    "update": updateStruct,
+  }
+
+  response, err := jiraClient.Issue.UpdateIssue(jiraIssue, data)
+  resp_body, _ := ioutil.ReadAll(response.Body)
+  fmt.Println("RESP: ", string(resp_body), "ERR: ",err)
+}
+
+func getSprintStats(jiraClient *jira.Client, jiraJQL string, jiraRelease string) {
   issues, _, err := jiraClient.Issue.Search(jiraJQL, &jira.SearchOptions{})
   var storyPoints int
 
@@ -48,7 +113,6 @@ func main() {
             len(issues),
             storyPoints,
           )
-
 }
 
 func getSprintName(customField string, startString string, endString string) (result string) {
